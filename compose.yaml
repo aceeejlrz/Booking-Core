@@ -1,0 +1,54 @@
+# The local stack: PostgreSQL, the service, and (only for load tests) k6.
+#
+#   docker compose up -d --build     start the database and the service on http://localhost:8080
+#   bash scripts/loadtest.sh         run a whole load test and verify it
+#
+# The CPU and memory limits are fixed on purpose, so load-test numbers are comparable between runs.
+# There are no volumes: every start begins with an empty database.
+
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: ticketdrop
+      POSTGRES_USER: ticketdrop
+      POSTGRES_PASSWORD: ticketdrop   # local development only
+    healthcheck:
+      # Checked over TCP on purpose. While the image initialises, a temporary server answers on the
+      # Unix socket only; a socket check would report "ready" too early and the service would crash.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ticketdrop -d ticketdrop"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    cpus: 2
+    mem_limit: 1g
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/ticketdrop
+      # atomic (the default) or naive. Set BOOKING_STRATEGY before starting to switch.
+      TICKETDROP_BOOKING_STRATEGY: ${BOOKING_STRATEGY:-atomic}
+    ports:
+      - "8080:8080"
+    cpus: 2
+    mem_limit: 1g
+
+  k6:
+    image: grafana/k6:2.3.0
+    profiles: ["loadtest"]
+    # Root, so that it can write the results into the bind-mounted folder on any host.
+    user: root
+    volumes:
+      - ./load:/load
+    environment:
+      BASE_URL: http://app:8080
+      BUYERS: ${BUYERS:-2000}
+      ROWS: ${ROWS:-20}
+      SEATS_PER_ROW: ${SEATS_PER_ROW:-25}
+    # The whole command line lives here, so no container path is ever typed into a shell. Git Bash on
+    # Windows rewrites arguments that look like Unix paths, which would break them.
+    command: ["run", "--out", "csv=/load/results/metrics.csv", "/load/drop.js"]
