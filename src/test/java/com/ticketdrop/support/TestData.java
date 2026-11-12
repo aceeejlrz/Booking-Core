@@ -58,6 +58,22 @@ public final class TestData {
                 .param("order", order).param("seat", seatId).update();
     }
 
+    /** Makes a hold expired: its expiry, and its seats' copy of it, move one second into the past. */
+    public void expireHold(UUID holdId) {
+        jdbc.sql("update holds set expires_at = now() - interval '1 second' where id = :hold")
+                .param("hold", holdId).update();
+        jdbc.sql("update seats set hold_expires_at = now() - interval '1 second' where hold_id = :hold")
+                .param("hold", holdId).update();
+    }
+
+    /**
+     * Takes one seat away from whatever hold has it and gives it to a fresh 1-seat hold of a random
+     * buyer, expiring in 5 minutes. The original hold stays unexpired but is no longer whole.
+     */
+    public void stealSeat(long seatId) {
+        markHeld(seatId, Duration.ofMinutes(5));
+    }
+
     private UUID insertHold(long seatId, Duration expiresFromNow) {
         UUID hold = UUID.randomUUID();
         jdbc.sql("""

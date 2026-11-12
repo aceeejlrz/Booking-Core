@@ -8,8 +8,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import tools.jackson.databind.json.JsonMapper;
 
@@ -46,6 +48,21 @@ public final class ApiClient {
 
     public ApiResponse summary(long eventId) {
         return send("GET", "/api/events/" + eventId + "/summary", null);
+    }
+
+    public ApiResponse hold(long eventId, UUID buyerId, List<Long> seatIds) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("buyerId", buyerId.toString());
+        body.put("seatIds", seatIds);
+        return send("POST", "/api/events/" + eventId + "/holds", JSON.writeValueAsString(body));
+    }
+
+    public ApiResponse release(UUID holdId) {
+        return send("DELETE", "/api/holds/" + holdId, null);
+    }
+
+    public ApiResponse buy(UUID holdId) {
+        return send("POST", "/api/orders", JSON.writeValueAsString(Map.of("holdId", holdId.toString())));
     }
 
     /**
