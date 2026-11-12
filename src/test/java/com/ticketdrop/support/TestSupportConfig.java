@@ -37,4 +37,10 @@ public class TestSupportConfig {
     TestData testData(JdbcClient jdbc) {
         return new TestData(jdbc);
     }
+
+    @Bean
+    @Lazy
+    Invariants invariants(JdbcClient jdbc) {
+        return new Invariants(jdbc);
+    }
 }

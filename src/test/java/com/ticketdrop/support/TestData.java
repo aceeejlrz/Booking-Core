@@ -67,6 +67,24 @@ public final class TestData {
     }
 
     /**
+     * Moves a hold's expiry, and its seats' copy of it, to {@code fromNow} from this very moment.
+     * It uses the real clock rather than the transaction's start time, so a race test can make a
+     * hold expire a few milliseconds ahead.
+     */
+    public void expireHoldIn(UUID holdId, Duration fromNow) {
+        jdbc.sql("""
+                update holds
+                set expires_at = clock_timestamp() + make_interval(secs => :seconds)
+                where id = :hold""")
+                .param("seconds", fromNow.toNanos() / 1_000_000_000.0).param("hold", holdId).update();
+        jdbc.sql("""
+                update seats
+                set hold_expires_at = (select expires_at from holds where id = :hold)
+                where hold_id = :hold""")
+                .param("hold", holdId).update();
+    }
+
+    /**
      * Takes one seat away from whatever hold has it and gives it to a fresh 1-seat hold of a random
      * buyer, expiring in 5 minutes. The original hold stays unexpired but is no longer whole.
      */
