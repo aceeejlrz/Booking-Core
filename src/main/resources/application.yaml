@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: ticketdrop
+  datasource:
+    # Local development values. Docker Compose and any deployment override them through the environment.
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/ticketdrop}
+    username: ${DB_USER:ticketdrop}
+    password: ${DB_PASSWORD:ticketdrop}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+# Booking settings and their defaults (see BookingProperties):
+#   ticketdrop.hold-duration       5m       how long a hold lasts
+#   ticketdrop.max-seats-per-hold  4        the most seats one hold may take
+#   ticketdrop.booking-strategy    atomic   atomic | naive (naive is deliberately unsafe)
