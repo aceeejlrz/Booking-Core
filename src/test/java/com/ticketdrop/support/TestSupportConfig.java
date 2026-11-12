@@ -5,6 +5,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -29,5 +30,11 @@ public class TestSupportConfig {
     @Lazy
     ApiClient apiClient(@Value("${local.server.port}") int port) {
         return new ApiClient(port);
+    }
+
+    @Bean
+    @Lazy
+    TestData testData(JdbcClient jdbc) {
+        return new TestData(jdbc);
     }
 }

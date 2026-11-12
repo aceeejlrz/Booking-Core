@@ -7,7 +7,11 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
+
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Calls the running service over real HTTP. Thread-safe: race tests share one instance between
@@ -16,6 +20,7 @@ import java.util.Set;
 public final class ApiClient {
 
     private static final Set<String> METHODS_WITH_A_BODY = Set.of("POST", "PUT", "PATCH");
+    private static final JsonMapper JSON = JsonMapper.shared();
 
     private final HttpClient http = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
@@ -25,6 +30,22 @@ public final class ApiClient {
 
     public ApiClient(int port) {
         this.baseUrl = "http://localhost:" + port;
+    }
+
+    public ApiResponse createEvent(String name, int rows, int seatsPerRow) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("name", name);
+        body.put("rows", rows);
+        body.put("seatsPerRow", seatsPerRow);
+        return send("POST", "/api/events", JSON.writeValueAsString(body));
+    }
+
+    public ApiResponse listSeats(long eventId) {
+        return send("GET", "/api/events/" + eventId + "/seats", null);
+    }
+
+    public ApiResponse summary(long eventId) {
+        return send("GET", "/api/events/" + eventId + "/summary", null);
     }
 
     /**
