@@ -1,0 +1,46 @@
+Command: ./mvnw test -Dgroups=race -Dticketdrop.booking-strategy=naive
+Date:    2026-11-15
+Result:  BUILD FAILURE, all five race tests fail against the naive strategy (expected).
+
+Startup warning from the service:
+  c.t.booking.NaiveBookingService          : NAIVE booking strategy is enabled. It is deliberately unsafe and will double-book under load. Never use it outside a demonstration.
+
+Failure summary:
+
+[INFO] Results:
+[INFO] 
+[ERROR] Failures: 
+[ERROR]   BookingRaceTest.r1_twoHundredBuyersOneSeat:79 [R1 round 0: statuses of 200 holds of one seat] 
+expected: {201=1L, 409=199L}
+ but was: {201=10L, 409=190L}
+[ERROR]   BookingRaceTest.r2_overlappingGroups:115 [R2 round 0, statuses {201=10, 409=190}: seat 54 is in two 201 responses (holds 2bd2c2aa-f7dc-4a6c-a8e6-f5787e9ae73d and 6761fff0-ef15-41d1-9e3a-4d24d62b36cf)] 
+expected: null
+ but was: 2bd2c2aa-f7dc-4a6c-a8e6-f5787e9ae73d
+[ERROR]   BookingRaceTest.r3_oneHoldBoughtFiftyTimes:157 [R3 round 0, statuses {200=40, 201=1, 500=9}] 
+expected: {200=49L, 201=1L}
+ but was: {200=40L, 201=1L, 500=9L}
+[ERROR]   BookingRaceTest.r4_buyAtTheMomentOfExpiry:197 [R4 round 1, buy 201, holds {409=21, 500=9}] 
+Expecting :
+  [409, 500]
+to be subset of
+  [201, 409]
+but found these extra elements:
+  [500]
+[ERROR]   BookingRaceTest.r5_storm:250 
+Multiple Failures (1 failure)
+-- failure 1 --
+[V6: buys answered 410 (broken promises)] 
+expected: 0
+ but was: 5
+at BookingRaceTest.r5_storm(BookingRaceTest.java:246)
+[INFO] 
+[ERROR] Tests run: 5, Failures: 5, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[ERROR] BUILD FAILURE
+
+Where the 500s come from (database constraints stopping the naive strategy's writes):
+- R3: a second simultaneous buy of the same hold inserts a second order:
+    Caused by: org.postgresql.util.PSQLException: ERROR: duplicate key value violates unique constraint "orders_one_per_hold"
+- R4: a hold overwrites a seat that the buy has just sold:
+    where id in (?)]; ERROR: new row for relation "seats" violates check constraint "seats_columns_agree_with_status"
